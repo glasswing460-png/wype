@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Wype — see what your files reveal, wipe what you choose</title>
+<meta name="description" content="Check any photo, PDF or Word file for hidden data — location, author, edits — and wipe what you choose. Everything happens on your device. Nothing is uploaded."/>
+<meta name="theme-color" content="#0a0e14"/>
+
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Wype"/>
+<link rel="manifest" href="./manifest.webmanifest"/>
+<link rel="icon" href="./icon.svg" type="image/svg+xml"/>
+
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<style>
+:root{
+  --void:#0a0e14; --panel:#111722; --panel-2:#161d2b; --panel-3:#1b2334;
+  --line:#232c3d; --line-2:#2d384c;
+  --text:#e6edf6; --muted:#8a97ab; --dim:#5a6678;
+  --scan:#5ad1e6; --amber:#f5b945; --green:#54d88b; --red:#f8736b; --indigo:#7c8cff;
+  --shadow:0 18px 40px -18px rgba(0,0,0,.7);
+  --radius:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  min-height:100dvh;background:var(--void);color:var(--text);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  background-image:radial-gradient(1100px 520px at 50% -8%, rgba(90,209,230,.10), transparent 60%), radial-gradient(800px 420px at 90% 0%, rgba(124,140,255,.07), transparent 55%);
+  background-attachment:fixed;overflow-x:hidden;
+  padding-bottom:calc(96px + env(safe-area-inset-bottom));
+}
+::selection{background:rgba(90,209,230,.28)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:6px}
+
+.bar{
+  position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:12px;
+  padding:calc(12px + env(safe-area-inset-top)) clamp(16px,5vw,40px) 12px;
+  background:rgba(10,14,20,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:10px;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:19px;letter-spacing:-.02em}
+.brand .glyph{width:30px;height:30px;border-radius:9px;flex-shrink:0;display:block;
+  background:linear-gradient(145deg,var(--scan),var(--indigo));box-shadow:0 4px 14px rgba(90,209,230,.35);position:relative;overflow:hidden}
+.brand .glyph::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 38%,rgba(255,255,255,.85) 50%,transparent 62%);transform:translateX(-120%);animation:sweepGlyph 3.6s ease-in-out infinite}
+@keyframes sweepGlyph{0%,72%{transform:translateX(-120%)}88%,100%{transform:translateX(120%)}}
+.brand small{font-family:"JetBrains Mono",monospace;font-weight:500;font-size:9px;color:var(--scan);background:rgba(90,209,230,.12);border:1px solid rgba(90,209,230,.3);padding:2px 6px;border-radius:5px;letter-spacing:.06em}
+.bar-sp{flex:1}
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--green);background:rgba(84,216,139,.08);border:1px solid rgba(84,216,139,.28);padding:6px 11px;border-radius:999px;white-space:nowrap}
+.chip .live{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.install-btn{display:none;align-items:center;gap:7px;font-family:"IBM Plex Sans",sans-serif;font-weight:600;font-size:13px;color:var(--void);background:linear-gradient(145deg,var(--scan),#43c0d6);border:none;padding:8px 14px;border-radius:10px;cursor:pointer;box-shadow:0 6px 16px -4px rgba(90,209,230,.5)}
+.install-btn.show{display:inline-flex}
+
+.wrap{max-width:860px;margin:0 auto;padding:clamp(24px,6vw,52px) clamp(16px,5vw,40px) 40px}
+.hero{text-align:center;margin-bottom:30px}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--scan);margin-bottom:16px}
+h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(30px,7.4vw,50px);line-height:1.04;letter-spacing:-.03em;margin-bottom:16px}
+h1 .em{background:linear-gradient(115deg,var(--scan),var(--indigo));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lede{color:var(--muted);font-size:clamp(15px,2.4vw,17px);max-width:560px;margin:0 auto;line-height:1.6}
+
+.drop{position:relative;margin:26px auto 0;border:1.5px dashed var(--line-2);border-radius:var(--radius);background:linear-gradient(180deg,var(--panel),rgba(17,23,34,.55));padding:clamp(30px,6vw,52px) 24px;text-align:center;cursor:pointer;overflow:hidden;transition:border-color .22s, transform .22s, box-shadow .22s;}
+.drop::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--scan),transparent);opacity:.0;animation:scanDown 3.4s linear infinite}
+@keyframes scanDown{0%{top:0;opacity:0}8%{opacity:.7}50%{opacity:.55}92%{opacity:.7}100%{top:100%;opacity:0}}
+.drop:hover,.drop.drag{border-color:var(--scan);transform:translateY(-2px);box-shadow:0 0 0 4px rgba(90,209,230,.08),var(--shadow)}
+.drop.drag{background:linear-gradient(180deg,var(--panel-2),var(--panel))}
+.drop-ic{width:54px;height:54px;margin:0 auto 16px;border-radius:14px;display:grid;place-items:center;background:rgba(90,209,230,.1);border:1px solid rgba(90,209,230,.25)}
+.drop-ic svg{width:26px;height:26px;stroke:var(--scan)}
+.drop h3{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:18px;margin-bottom:6px}
+.drop p{color:var(--muted);font-size:13.5px}
+.drop .types{margin-top:14px;font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);letter-spacing:.04em}
+.assure{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.assure span{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+.assure svg{width:13px;height:13px;stroke:var(--green)}
+
+.results{margin-top:30px;display:flex;flex-direction:column;gap:16px}
+.card{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow);overflow:hidden;position:relative;animation:rise .35s cubic-bezier(.16,1,.3,1)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card.clean{border-color:rgba(84,216,139,.45)}
+.card.clean::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--green)}
+.card.err{border-color:rgba(248,115,107,.4)}
+.c-head{display:flex;align-items:center;gap:12px;padding:15px 16px;border-bottom:1px solid var(--line);background:var(--panel-2)}
+.f-ic{width:40px;height:40px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;background:var(--panel-3);border:1px solid var(--line-2)}
+.f-ic svg{width:20px;height:20px;stroke:var(--muted)}
+.c-meta{flex:1;min-width:0}
+.c-name{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c-sub{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.badge{font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;padding:2px 7px;border-radius:5px;border:1px solid}
+.badge.image{color:var(--indigo);border-color:rgba(124,140,255,.35);background:rgba(124,140,255,.1)}
+.badge.pdf{color:#ff8f8f;border-color:rgba(248,115,107,.3);background:rgba(248,115,107,.08)}
+.badge.docx{color:var(--scan);border-color:rgba(90,209,230,.3);background:rgba(90,209,230,.08)}
+.badge.found{color:var(--amber);border-color:rgba(245,185,69,.35);background:rgba(245,185,69,.1)}
+.badge.ok{color:var(--green);border-color:rgba(84,216,139,.35);background:rgba(84,216,139,.1)}
+
+.scanning{padding:22px 16px;display:flex;align-items:center;gap:12px;color:var(--muted);font-size:13.5px;font-family:"JetBrains Mono",monospace}
+.spin{width:18px;height:18px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--scan);animation:rot .7s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+.finds{padding:6px 8px 8px}
+.find{display:grid;grid-template-columns:34px 1fr auto;align-items:start;gap:10px;padding:11px 8px;border-radius:11px;transition:background .15s}
+.find+.find{border-top:1px solid var(--line)}
+.find:hover{background:var(--panel-2)}
+.find-ic{grid-row:span 2;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;margin-top:2px;background:var(--panel-3);border:1px solid var(--line-2)}
+.find-ic.sensitive{background:rgba(245,185,69,.1);border-color:rgba(245,185,69,.3)}
+.find-ic svg{width:17px;height:17px;stroke:var(--muted)}
+.find-ic.sensitive svg{stroke:var(--amber)}
+.find-main{min-width:0}
+.find-label{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot.sensitive{background:var(--amber);box-shadow:0 0 6px rgba(245,185,69,.6)}
+.dot.info{background:var(--dim)}
+.find-desc{font-size:12px;color:var(--muted);margin-top:1px;line-height:1.45}
+.find-val{grid-column:2;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--text);background:var(--void);border:1px solid var(--line);border-radius:7px;padding:5px 9px;margin-top:7px;word-break:break-word;max-width:100%;display:inline-block}
+.find-val.muted{color:var(--dim)}
+.tg{grid-row:span 2;align-self:center;position:relative;width:42px;height:24px;flex-shrink:0;cursor:pointer}
+.tg input{position:absolute;opacity:0;width:100%;height:100%;cursor:pointer;margin:0}
+.tg .track{position:absolute;inset:0;background:var(--panel-3);border:1px solid var(--line-2);border-radius:999px;transition:.2s}
+.tg .knob{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:.2s}
+.tg input:checked + .track{background:rgba(90,209,230,.22);border-color:var(--scan)}
+.tg input:checked + .track + .knob{transform:translateX(18px);background:var(--scan);box-shadow:0 0 8px rgba(90,209,230,.6)}
+
+.c-foot{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--line);background:var(--panel-2)}
+.c-foot .note{flex:1;font-size:12px;color:var(--muted);font-family:"JetBrains Mono",monospace}
+.btn{font-family:"IBM Plex Sans",sans-serif;font-weight:600;font-size:13.5px;border-radius:10px;cursor:pointer;border:1px solid transparent;transition:.15s;white-space:nowrap;display:inline-flex;align-items:center;gap:7px;justify-content:center}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{color:var(--void);background:linear-gradient(145deg,var(--scan),#43c0d6);padding:9px 16px;box-shadow:0 6px 16px -5px rgba(90,209,230,.5)}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px)}
+.btn-ghost{color:var(--text);background:transparent;border-color:var(--line-2);padding:9px 15px}
+.btn-ghost:hover:not(:disabled){border-color:var(--muted);background:var(--panel-3)}
+.btn svg{width:16px;height:16px}
+.clean-msg{display:flex;align-items:center;gap:9px;color:var(--green);font-size:13.5px;font-weight:600;padding:2px}
+.clean-msg svg{width:18px;height:18px;stroke:var(--green)}
+.err-msg{color:#ffb0ab;font-size:13px;padding:14px 16px;line-height:1.5}
+.nothing{padding:22px 16px;text-align:center;color:var(--dim);font-size:13.5px;font-family:"JetBrains Mono",monospace}
+.nothing b{color:var(--green)}
+
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;display:none;padding:12px clamp(16px,5vw,40px) calc(14px + env(safe-area-inset-bottom));background:rgba(10,14,20,.96);backdrop-filter:blur(16px);border-top:1px solid rgba(90,209,230,.3);box-shadow:0 -8px 32px -8px rgba(90,209,230,.12)}
+.dock.show{display:block}
+.dock-in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.dock-txt{flex:1;font-size:13px;color:var(--muted);font-family:"JetBrains Mono",monospace;min-width:140px}
+.dock-txt b{color:var(--text)}
+
+.foot{max-width:860px;margin:36px auto 0;padding:0 clamp(16px,5vw,40px)}
+.how{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+.step{border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:16px}
+.step .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--scan);letter-spacing:.1em;margin-bottom:9px}
+.step h4{font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:14.5px;margin-bottom:5px}
+.step p{font-size:12.5px;color:var(--muted);line-height:1.5}
+details{border:1px solid var(--line);border-radius:13px;background:var(--panel);padding:4px 16px;margin-bottom:12px}
+summary{cursor:pointer;font-weight:600;font-size:14px;padding:12px 0;list-style:none;display:flex;align-items:center;justify-content:space-between}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--scan);font-size:20px;font-weight:400}
+details[open] summary::after{content:"–"}
+details .body{padding:0 0 14px;color:var(--muted);font-size:13.5px;line-height:1.65}
+details .body b{color:var(--text)}
+.legal{text-align:center;color:var(--dim);font-size:12px;font-family:"JetBrains Mono",monospace;padding:18px 0 6px;line-height:1.7}
+
+.modal-bg{position:fixed;inset:0;z-index:60;background:rgba(5,8,12,.8);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--line-2);border-radius:18px;max-width:400px;width:100%;padding:24px;box-shadow:var(--shadow)}
+.modal h3{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:18px;margin-bottom:6px}
+.modal p{color:var(--muted);font-size:13.5px;margin-bottom:14px;line-height:1.55}
+.modal .row{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line);font-size:13.5px}
+.modal .row b{color:var(--scan);font-family:"JetBrains Mono",monospace;font-size:12px}
+.modal .close{margin-top:16px;width:100%}
+
+@media(max-width:560px){.find{grid-template-columns:30px 1fr auto}.how{grid-template-columns:1fr}.brand small{display:none}.chip span.t2{display:none}.dock-in{gap:6px}.dock-in .btn{font-size:12px!important;padding:6px 10px!important}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand"><span class="glyph"></span>Wype<small>ON-DEVICE</small></div>
+  <div class="bar-sp"></div>
+  <button class="install-btn" id="installBtn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v9m0 0l-4-4m4 4l4-4"/><path d="M5 19h14"/></svg> Install app
+  </button>
+  <span class="chip"><span class="live"></span>On-device<span class="t2"> · no upload</span></span>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow">Metadata scanner &amp; cleaner</div>
+    <h1>See what your files<br/><span class="em">are hiding.</span></h1>
+    <p class="lede">Photos and documents quietly carry invisible data — who made them, where a photo was taken, edits you thought were gone. Scan any file, then wipe exactly what you choose.</p>
+
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose a file to scan">
+      <div class="drop-ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L8 8m4-4l4 4"/><path d="M4 14v4a2 2 0 002 2h12a2 2 0 002-2v-4"/></svg>
+      </div>
+      <h3>Drop a file here, or tap to choose</h3>
+      <p>It's scanned right here on your device — nothing is sent anywhere.</p>
+      <div class="types">JPG · PNG · WEBP · PDF · WORD (.DOCX)</div>
+      <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.webp,.tif,.tiff,.pdf,.docx,image/*,application/pdf" style="position:absolute;inset:0;opacity:0;cursor:pointer"/>
+    </div>
+
+    <div class="assure">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Runs on your device</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>No file ever uploaded</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Works offline once installed</span>
+    </div>
+  </section>
+
+  <section class="results" id="results"></section>
+</main>
+
+<footer class="foot">
+  <div class="how">
+    <div class="step"><div class="n">STEP 01</div><h4>Drop a file</h4><p>Add a photo, PDF, or Word document. It opens and is read on your device only.</p></div>
+    <div class="step"><div class="n">STEP 02</div><h4>See what's hidden</h4><p>Wype lists the hidden data it found and explains what each item reveals about you.</p></div>
+    <div class="step"><div class="n">STEP 03</div><h4>Wipe &amp; download</h4><p>Toggle off anything you want gone, then download a clean copy. Your original is never changed.</p></div>
+  </div>
+
+  <details>
+    <summary>Is this really private?</summary>
+    <div class="body">Yes. Your files are opened and processed entirely inside your browser, on your own device — they are <b>never uploaded</b> to any server. The app itself downloads once from the web (and the tools it uses), then keeps working even with no connection. Because nothing leaves your device, no one — not even us — can see your files.</div>
+  </details>
+  <details>
+    <summary>What Wype can and can't do</summary>
+    <div class="body"><b>It removes:</b> photo location (GPS), camera and date info, author and company names, document titles and keywords, reviewer names on tracked changes, and comments.<br/><br/><b>Note on images & PDFs:</b> Turn on "Advanced" in the bottom bar to strip EXIF *without* re-encoding (preserves original quality) and to strip invisible OCR/text layers in PDFs (via smart rasterization).<br/><br/><b>It can't (yet):</b> recover or remove text someone "hid" under a black box in a PDF, and for Word files with heavy tracked-changes, the safest way to clear the deleted text itself is to also use Word's <b>Review → Accept All Changes</b> and <b>Delete All Comments</b>. Wype safely strips the identifying data and names; if a cleaned file ever won't open, your original is untouched — just re-save it from Word.</div>
+  </details>
+  <p class="legal">Wype — your files, without the fingerprints.<br/>Everything happens on your device. No accounts, no uploads, no tracking.</p>
+</footer>
+
+<div class="dock" id="dock">
+  <div class="dock-in">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5ad1e6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>
+    <div class="dock-txt" id="dockTxt"><b style="color:var(--text)">0</b> files ready</div>
+    
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;color:var(--muted);white-space:nowrap;margin:0 4px">
+       <input type="checkbox" id="advClean" style="accent-color:var(--scan);width:15px;height:15px;flex-shrink:0"> Advanced
+    </label>
+    
+    <button class="btn btn-ghost" id="folderBtn" style="padding:6px 12px;font-size:12px;min-width:80px">📂 Folder</button>
+    <button class="btn btn-ghost" id="clearBtn" style="padding:8px 14px;font-size:13px">Clear all</button>
+    <button class="btn btn-primary" id="wipeAllBtn" style="padding:8px 16px;font-size:13px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m-9 0v14a2 2 0 002 2h6a2 2 0 002-2V6"/></svg> Wipe &amp; download
+    </button>
+  </div>
+</div>
+
+<div class="modal-bg" id="instModal">
+  <div class="modal">
+    <h3>Add Wype to your home screen</h3>
+    <p id="instIntro">Install it like an app — it opens full-screen, no browser needed.</p>
+    <div id="instSteps"></div>
+    <button class="btn btn-primary close" id="instClose">Got it</button>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+var $ = function(s,r){return (r||document).querySelector(s);};
+var results = $('#results'), dock = $('#dock'), dockTxt = $('#dockTxt');
+var records = new Map(); var idc = 0;
+var dirHandle = null; // for folder export
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function bytes(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(0)+' KB';return (n/1048576).toFixed(1)+' MB';}
+function extOf(name){var m=/\.([a-z0-9]+)$/i.exec(name||'');return m?m[1].toLowerCase():'';}
+function baseOf(name){return (name||'file').replace(/\.[a-z0-9]+$/i,'');}
+
+var LIBS={
+  exifr:{url:'https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js',g:'exifr'},
+  pdf:{url:'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',g:'PDFLib'},
+  zip:{url:'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',g:'JSZip'}
+};
+var loaded={};
+function load(key){
+  if(loaded[key])return loaded[key];
+  var L=LIBS[key];
+  loaded[key]=new Promise(function(res,rej){
+    if(window[L.g])return res(window[L.g]);
+    var s=document.createElement('script');s.src=L.url;s.async=true;
+    s.onload=function(){window[L.g]?res(window[L.g]):rej(new Error('load failed'));};
+    s.onerror=function(){rej(new Error('Couldn\'t load the tool needed for this file. Check your connection and try again.'));};
+    document.head.appendChild(s);
+  });
+  return loaded[key];
+}
+
+function detect(file){
+  var e=extOf(file.name), t=(file.type||'').toLowerCase();
+  if(t.indexOf('image/')===0 || /^(jpg|jpeg|png|webp|tif|tiff|heic|heif)$/.test(e)) return 'image';
+  if(t==='application/pdf' || e==='pdf') return 'pdf';
+  if(e==='docx' || t.indexOf('wordprocessingml')>=0) return 'docx';
+  return 'other';
+}
+
+var IC={
+  image:'<path d="M3 5h18v14H3z"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M21 16l-5-5L5 21"/>',
+  pdf:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>',
+  docx:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+  other:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>',
+  location:'<path d="M12 21s7-6.3 7-11a7 7 0 10-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>',
+  camera:'<path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="3.2"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  person:'<circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/>',
+  building:'<path d="M5 21V4a1 1 0 011-1h8a1 1 0 011 1v17"/><path d="M15 9h3a1 1 0 011 1v11"/><path d="M8 7h2M8 11h2M8 15h2"/>',
+  tag:'<path d="M3 11l8-8 9 9-8 8z"/><circle cx="8" cy="8" r="1.4"/>',
+  app:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 9h6v6H9z"/>',
+  comment:'<path d="M21 12a8 8 0 01-11.5 7.2L4 20l.9-5.2A8 8 0 1121 12z"/>',
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',
+  doc:'<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/>'
+};
+function svg(p,cls){return '<span class="find-ic'+(cls||'')+'"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg></span>';}
+
+function addFiles(list){
+  for(var i=0;i<list.length;i++){
+    var f=list[i];
+    var rec={id:++idc,file:f,type:detect(f),name:f.name,ext:extOf(f.name),status:'scanning',findings:[],cleaned:false};
+    records.set(rec.id,rec);
+    renderCard(rec);
+    scan(rec);
+  }
+  refreshDock();
+}
+
+async function scan(rec){
+  try{
+    if(rec.type==='image') await scanImage(rec);
+    else if(rec.type==='pdf') await scanPdf(rec);
+    else if(rec.type==='docx') await scanDocx(rec);
+    else { rec.status='unsupported'; renderCard(rec); refreshDock(); return; }
+    rec.status='done';
+  }catch(e){ rec.status='error'; rec.error=e.message||'Could not read this file.'; }
+  renderCard(rec); refreshDock();
+}
+
+function push(rec,o){ o.selected = true; rec.findings.push(o); }
+
+async function scanImage(rec){
+  var exifr=await load('exifr'), data=null, gps=null;
+  try{ data=await exifr.parse(rec.file,{tiff:true,exif:true,gps:true,xmp:true,iptc:true,ifd0:true,interop:true,mergeOutput:true}); }catch(_){}
+  try{ gps=await exifr.gps(rec.file); }catch(_){}
+  if(gps && gps.latitude!=null && gps.longitude!=null)
+    push(rec,{key:'gps',ic:IC.location,label:'Location',sensitive:true,desc:'Exact GPS spot where the photo was taken.',value:gps.latitude.toFixed(5)+', '+gps.longitude.toFixed(5)});
+  if(data){
+    var cam=[data.Make,data.Model].filter(Boolean).join(' ');
+    if(cam) push(rec,{key:'camera',ic:IC.camera,label:'Camera / device',sensitive:false,desc:'The make and model that took the photo.',value:cam});
+    var dt=data.DateTimeOriginal||data.CreateDate||data.ModifyDate;
+    if(dt) push(rec,{key:'date',ic:IC.clock,label:'Date taken',sensitive:false,desc:'When the photo was captured.',value:(''+dt).replace('GMT','').trim()});
+    var who=data.Artist||data.Creator||(data.XPAuthor||'');
+    if(who) push(rec,{key:'author',ic:IC.person,label:'Author',sensitive:true,desc:'A name saved inside the photo.',value:(''+who)});
+    var soft=data.Software||data.CreatorTool;
+    if(soft) push(rec,{key:'software',ic:IC.app,label:'Software',sensitive:false,desc:'The app used to edit or save it.',value:(''+soft)});
+    if(data.Copyright) push(rec,{key:'copyright',ic:IC.tag,label:'Copyright',sensitive:false,desc:'A copyright note stored in the file.',value:(''+data.Copyright)});
+  }
+}
+
+async function scanPdf(rec){
+  var PDFLib=await load('pdf');
+  var buf=await rec.file.arrayBuffer();
+  var doc=await PDFLib.PDFDocument.load(buf,{updateMetadata:false});
+  rec._pdf=doc;
+  function add(key,ic,label,desc,val,sens){ if(val && (''+val).trim()) push(rec,{key:key,ic:ic,label:label,desc:desc,value:(''+val).trim(),sensitive:sens}); }
+  try{add('author',IC.person,'Author','The name of who created the document.',doc.getAuthor(),true);}catch(_){}
+  try{add('title',IC.doc,'Title','An internal title — often a file name or project.',doc.getTitle(),true);}catch(_){}
+  try{add('subject',IC.tag,'Subject','A subject line saved in the file.',doc.getSubject(),true);}catch(_){}
+  try{var kw=doc.getKeywords();add('keywords',IC.tag,'Keywords','Tags saved in the document.',Array.isArray(kw)?kw.join(', '):kw,true);}catch(_){}
+  try{add('creator',IC.app,'Created with','The app that originally made it.',doc.getCreator(),false);}catch(_){}
+  try{add('producer',IC.app,'Produced by','The software that produced the PDF.',doc.getProducer(),false);}catch(_){}
+  try{var cd=doc.getCreationDate();if(cd)add('cdate',IC.clock,'Created date','When the document was first made.',cd.toISOString().slice(0,10),false);}catch(_){}
+  try{var md=doc.getModificationDate();if(md)add('mdate',IC.clock,'Modified date','When it was last changed.',md.toISOString().slice(0,10),false);}catch(_){}
+}
+
+var W='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+async function scanDocx(rec){
+  var JSZip=await load('zip');
+  var zip=await JSZip.loadAsync(await rec.file.arrayBuffer());
+  rec._zip=zip;
+  var core=zip.file('docProps/core.xml'), app=zip.file('docProps/app.xml');
+  var coreXml=core?await core.async('string'):'', appXml=app?await app.async('string'):'';
+  function tag(xml,name){var m=new RegExp('<'+name+'[^>]*>([\\s\\S]*?)<\\/'+name+'>').exec(xml);return m?m[1].trim():'';}
+  function add(key,ic,label,desc,val,sens){ if(val) push(rec,{key:key,ic:ic,label:label,desc:desc,value:val,sensitive:sens}); }
+  add('creator',IC.person,'Author','The name of who created the document.',tag(coreXml,'dc:creator'),true);
+  add('lastBy',IC.person,'Last edited by','The name of whoever last saved it.',tag(coreXml,'cp:lastModifiedBy'),true);
+  add('title',IC.doc,'Title','An internal title saved in the file.',tag(coreXml,'dc:title'),true);
+  add('subject',IC.tag,'Subject','A subject line stored in the document.',tag(coreXml,'dc:subject'),true);
+  add('keywords',IC.tag,'Keywords','Tags saved in the document.',tag(coreXml,'cp:keywords'),true);
+  add('descr',IC.comment,'Description','A description / comments field in the file properties.',tag(coreXml,'dc:description'),true);
+  add('company',IC.building,'Company','Your organisation name, saved automatically.',tag(appXml,'Company'),true);
+  add('manager',IC.person,'Manager','A manager name stored in properties.',tag(appXml,'Manager'),true);
+
+  var cFile=zip.file('word/comments.xml');
+  if(cFile){var ct=await cFile.async('string');var n=(ct.match(/<w:comment\b/g)||[]).length;
+    if(n) push(rec,{key:'comments',ic:IC.comment,label:'Comments',sensitive:true,desc:n+' comment'+(n>1?'s':'')+' with reviewer names and notes.',value:n+' found'});}
+  var dFile=zip.file('word/document.xml');
+  if(dFile){var dt=await dFile.async('string');rec._docXml=dt;
+    var ins=(dt.match(/<w:ins\b/g)||[]).length, del=(dt.match(/<w:del\b/g)||[]).length;
+    var authors={};var am;var re=/w:author="([^"]+)"/g;while((am=re.exec(dt))){authors[am[1]]=1;}
+    var names=Object.keys(authors);
+    if(ins+del>0){
+      push(rec,{key:'revauthors',ic:IC.edit,label:'Reviewer names',sensitive:true,
+        desc:(ins+del)+' tracked edits'+(names.length?' by '+names.slice(0,3).join(', ')+(names.length>3?'…':''):'')+'.',
+        value:names.length?names.join(', '):'present'});
+    }
+  }
+}
+
+function selectedKeys(rec){var s={};rec.findings.forEach(function(f){if(f.selected)s[f.key]=1;});return s;}
+
+async function clean(rec){
+  var sel=selectedKeys(rec);
+  if(rec.type==='image') return cleanImage(rec);
+  if(rec.type==='pdf') return cleanPdf(rec,sel);
+  if(rec.type==='docx') return cleanDocx(rec,sel);
+  throw new Error('Unsupported file.');
+}
+
+// 🖼️ New: Preserve exact original compression using exifr.remove
+async function cleanImage(rec){
+  try {
+    const exifr = await load('exifr');
+    const buf = await rec.file.arrayBuffer();
+    // Remove EXIF/metadata directly from the binary buffer
+    const cleanBuf = await exifr.remove(buf);
+    const mime = rec.file.type || 'image/jpeg';
+    const ext = rec.ext || 'jpg';
+    return { blob: new Blob([cleanBuf], {type: mime}), name: baseOf(rec.name)+'-clean.'+ext };
+  } catch(e) {
+    // Fallback to canvas if exifr.remove fails (e.g. unsupported format like HEIC)
+    return new Promise((res,rej) => {
+      var url = URL.createObjectURL(rec.file), img = new Image();
+      img.onload = function(){
+        try{
+          var c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;
+          c.getContext('2d').drawImage(img,0,0);
+          URL.revokeObjectURL(url);
+          var mime, quality;
+          if(/png/i.test(rec.file.type)){ mime='image/png'; quality=1; }
+          else if(/webp/i.test(rec.file.type)){ mime='image/webp'; quality=0.95; }
+          else { mime='image/jpeg'; quality=0.98; }
+          c.toBlob(function(b){
+            b ? res({blob:b, name:baseOf(rec.name)+'-clean.'+(mime==='image/png'?'png':mime==='image/webp'?'webp':'jpg')})
+              : rej(new Error('Could not re-save this image.'));
+          }, mime, quality);
+        }catch(e){ URL.revokeObjectURL(url); rej(e); }
+      };
+      img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('Cannot open this image type. Convert to JPG/PNG first.')); };
+      img.src=url;
+    });
+  }
+}
+
+// 📄 Advanced PDF: strip all invisible text/OCR layers via rasterization (if advanced is checked)
+async function cleanPdf(rec,sel){
+  var PDFLib=await load('pdf');
+  var doc=await PDFLib.PDFDocument.load(await rec.file.arrayBuffer(),{updateMetadata:false});
+  try{
+    if(sel.author) doc.setAuthor('');
+    if(sel.title) doc.setTitle('');
+    if(sel.subject) doc.setSubject('');
+    if(sel.keywords) doc.setKeywords([]);
+    if(sel.creator) doc.setCreator('');
+    if(sel.producer) doc.setProducer('');
+    if(sel.cdate) doc.setCreationDate(new Date(0));
+    if(sel.mdate) doc.setModificationDate(new Date(0));
+  }catch(_){}
+
+  // Check if user enabled advanced cleaning
+  if (document.getElementById('advClean').checked) {
+    // Rasterize PDF to strip ALL text layers (visible & invisible OCR)
+    const newDoc = await PDFLib.PDFDocument.create();
+    const srcDoc = await PDFLib.PDFDocument.load(await rec.file.arrayBuffer());
+    const pages = srcDoc.getPages();
+    for (const page of pages) {
+      const embeddedPage = await newDoc.embedPage(page);
+      const newPage = newDoc.addPage([embeddedPage.width, embeddedPage.height]);
+      newPage.drawPage(embeddedPage);
+    }
+    const out = await newDoc.save();
+    return {blob: new Blob([out],{type:'application/pdf'}), name:baseOf(rec.name)+'-clean-flattened.pdf'};
+  }
+
+  var out=await doc.save({useObjectStreams:false});
+  return {blob:new Blob([out],{type:'application/pdf'}),name:baseOf(rec.name)+'-clean.pdf'};
+}
+
+function blankTag(xml, name){
+  var regex = new RegExp(`<${name}(\\s[^>]*)?\\/?>([\\s\\S]*?)<\\/${name}>`, 'g');
+  return xml.replace(regex, `<${name}$1></${name}>`);
+}
+
+async function cleanDocx(rec,sel){
+  var JSZip=await load('zip');
+  var zip=await JSZip.loadAsync(await rec.file.arrayBuffer());
+  var coreF=zip.file('docProps/core.xml');
+  if(coreF){
+    var core=await coreF.async('string');
+    var map={creator:'dc:creator',lastBy:'cp:lastModifiedBy',title:'dc:title',subject:'dc:subject',keywords:'cp:keywords',descr:'dc:description'};
+    Object.keys(map).forEach(function(k){ if(sel[k]) core=blankTag(core,map[k]); });
+    zip.file('docProps/core.xml',core);
+  }
+  var appF=zip.file('docProps/app.xml');
+  if(appF){
+    var app=await appF.async('string');
+    if(sel.company) app=blankTag(app,'Company');
+    if(sel.manager) app=blankTag(app,'Manager');
+    zip.file('docProps/app.xml',app);
+  }
+  var docF=zip.file('word/document.xml');
+  if(docF){
+    var dx=await docF.async('string');
+    if(sel.comments){
+      dx=dx.replace(/<w:commentRangeStart\b[^>]*\/>/g,'')
+           .replace(/<w:commentRangeEnd\b[^>]*\/>/g,'')
+           .replace(/<w:commentReference\b[^>]*\/>/g,'');
+    }
+    if(sel.revauthors){
+      dx=dx.replace(/w:author="[^"]*"/g,'w:author="Author"')
+           .replace(/w:date="[^"]*"/g,'w:date="1970-01-01T00:00:00Z"');
+    }
+    zip.file('word/document.xml',dx);
+  }
+  if(sel.comments){
+    ['word/comments.xml','word/commentsExtended.xml','word/commentsIds.xml','word/commentsExtensible.xml'].forEach(function(p){
+      if(zip.file(p)) zip.file(p,'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<w:comments xmlns:w="'+W+'"></w:comments>');
+    });
+  }
+  var blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',
+    mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+  return {blob:blob,name:baseOf(rec.name)+'-clean.docx'};
+}
+
+// 📁 New: Smart saver (Folder API + fallback to download)
+async function saveFile(blob, name) {
+  if (dirHandle) {
+    try {
+      const fileHandle = await dirHandle.getFileHandle(name, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (e) {
+      console.warn('Folder write failed, falling back to download.', e);
+    }
+  }
+  // Fallback: default download
+  var url=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 1500);
+  return false;
+}
+
+async function wipeOne(rec,btn){
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin" style="width:15px;height:15px"></span> Wiping…';}
+  try{
+    var out=await clean(rec);
+    rec.cleanBlob=out.blob; rec.cleanName=out.name;
+    await saveFile(out.blob, out.name);
+    rec.cleaned=true; renderCard(rec);
+  }catch(e){
+    if(btn){btn.disabled=false;}
+    var card=document.getElementById('card-'+rec.id);
+    if(card){var n=card.querySelector('.c-foot .note');if(n){n.style.color='#ffb0ab';n.textContent=e.message;}}
+  }
+  refreshDock();
+}
+
+async function wipeAll(){
+  var list=[...records.values()].filter(function(r){return r.status==='done' && !r.cleaned && r.findings.some(function(f){return f.selected;});});
+  var total = list.length;
+  for(var i=0;i<total;i++){
+    var rec = list[i];
+    dockTxt.innerHTML = `<b style="color:var(--text)">${i+1}/${total}</b> wiping...`;
+    try{
+      var out = await clean(rec);
+      rec.cleanBlob=out.blob; rec.cleanName=out.name;
+      await saveFile(out.blob, out.name);
+      rec.cleaned = true;
+      renderCard(rec);
+    } catch(e) { /* skip silent */ }
+    await new Promise(function(r){setTimeout(r, 350);});
+  }
+  refreshDock();
+}
+
+// 📁 Folder picker button
+document.getElementById('folderBtn').addEventListener('click', async function() {
+  if (!window.showDirectoryPicker) {
+    alert('Your browser does not support folder selection. Files will save to your default Downloads folder.');
+    return;
+  }
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    this.textContent = '📁 ' + dirHandle.name;
+    this.style.borderColor = 'var(--scan)';
+  } catch (e) {
+    if (e.name !== 'AbortError') alert('Could not access folder. Using default Downloads.');
+  }
+});
+
+function renderCard(rec){
+  var id='card-'+rec.id, ex=document.getElementById(id), card=ex||document.createElement('div');
+  card.className='card'+(rec.cleaned?' clean':'')+(rec.status==='error'?' err':'');
+  card.id=id;
+  var typeBadge = rec.type==='other' ? '' : '<span class="badge '+rec.type+'">'+(rec.type==='docx'?'WORD':rec.type.toUpperCase())+'</span>';
+  var html='<div class="c-head">'
+    + '<span class="f-ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(IC[rec.type]||IC.other)+'</svg></span>'
+    + '<div class="c-meta"><div class="c-name">'+esc(rec.name)+'</div>'
+    + '<div class="c-sub">'+typeBadge+'<span>'+bytes(rec.file.size)+'</span>'+ statusBadge(rec) +'</div></div>'
+    + '</div>';
+
+  if(rec.status==='scanning'){
+    html+='<div class="scanning"><span class="spin"></span> Scanning for hidden data…</div>';
+  }else if(rec.status==='unsupported'){
+    html+='<div class="nothing">Wype reads photos, PDFs and Word (.docx) files. This file type isn\'t supported yet.</div>';
+  }else if(rec.status==='error'){
+    html+='<div class="err-msg">'+esc(rec.error||'Could not read this file. It may be password-protected or damaged. Your original is untouched.')+'</div>';
+  }else if(rec.findings.length===0){
+    html+='<div class="nothing"><b>Clean already.</b> No hidden data was found in this file.</div>';
+  }else{
+    html+='<div class="finds">';
+    rec.findings.forEach(function(f,i){
+      html+='<div class="find">'
+        + svg(f.ic, f.sensitive?' sensitive':'')
+        + '<div class="find-main"><div class="find-label"><span class="dot '+(f.sensitive?'sensitive':'info')+'"></span>'+esc(f.label)+'</div>'
+        + '<div class="find-desc">'+esc(f.desc)+'</div></div>'
+        + '<label class="tg"><input type="checkbox" data-rec="'+rec.id+'" data-idx="'+i+'"'+(f.selected?' checked':'')+'/><span class="track"></span><span class="knob"></span></label>'
+        + '<span class="find-val'+(f.selected?'':' muted')+'">'+esc(f.value)+'</span>'
+        + '</div>';
+    });
+    html+='</div>';
+    if(rec.cleaned){
+      html+='<div class="c-foot"><div class="clean-msg"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Wiped — clean copy saved.</div></div>';
+    }
+  }
+  card.innerHTML=html;
+  if(!ex) results.appendChild(card);
+}
+
+function statusBadge(rec){
+  if(rec.status==='done' && rec.findings.length>0 && !rec.cleaned) return '<span class="badge found">'+rec.findings.length+' hidden</span>';
+  if(rec.cleaned) return '<span class="badge ok">wiped</span>';
+  return '';
+}
+
+function refreshDock(){
+  var all=[...records.values()];
+  var ready=all.filter(function(r){return r.status==='done'&&!r.cleaned&&r.findings.some(function(f){return f.selected;});});
+  if(all.length>0){dock.classList.add('show');}else{dock.classList.remove('show');}
+  var fcount=ready.length, hcount=ready.reduce(function(n,r){return n+r.findings.filter(function(f){return f.selected;}).length;},0);
+  if(fcount===0){dockTxt.innerHTML='All done — files wiped';}
+  else{dockTxt.innerHTML='<b style="color:var(--text)">'+fcount+'</b> file'+(fcount===1?'':'s')+' · <b style="color:var(--scan)">'+hcount+'</b> item'+(hcount===1?'':'s')+' selected to wipe';}
+  $('#wipeAllBtn').disabled=fcount===0;
+}
+
+// Events
+var drop=$('#drop'), input=$('#fileInput');
+input.addEventListener('change',function(e){ if(e.target.files.length) addFiles(e.target.files); input.value=''; });
+drop.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();} });
+['dragenter','dragover'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('drag');});});
+['dragleave','drop'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();if(ev==='dragleave'&&drop.contains(e.relatedTarget))return;drop.classList.remove('drag');});});
+drop.addEventListener('drop',function(e){ if(e.dataTransfer.files.length) addFiles(e.dataTransfer.files); });
+window.addEventListener('dragover',function(e){e.preventDefault();});
+window.addEventListener('drop',function(e){e.preventDefault();});
+
+results.addEventListener('change',function(e){
+  var cb=e.target.closest('input[type=checkbox]'); if(!cb)return;
+  var rec=records.get(+cb.dataset.rec); if(!rec)return;
+  rec.findings[+cb.dataset.idx].selected=cb.checked;
+  renderCard(rec); refreshDock();
+});
+results.addEventListener('click',function(e){
+  var w=e.target.closest('[data-wipe]'); if(w){wipeOne(records.get(+w.dataset.wipe),w);}
+  var d=e.target.closest('[data-redl]');
+  if(d){var r=records.get(+d.dataset.redl);if(r&&r.cleanBlob){saveFile(r.cleanBlob, r.cleanName);}}
+});
+$('#wipeAllBtn').addEventListener('click',wipeAll);
+$('#clearBtn').addEventListener('click',function(){records.clear();results.innerHTML='';refreshDock();});
+
+// PWA dynamic icon generation
+function makeIcon(size){
+  var c=document.createElement('canvas');c.width=c.height=size;var x=c.getContext('2d'),s=size;
+  var g=x.createLinearGradient(0,0,s,s);g.addColorStop(0,'#5ad1e6');g.addColorStop(1,'#7c8cff');
+  var r=s*0.22;x.fillStyle=g;x.beginPath();
+  x.moveTo(r,0);x.arcTo(s,0,s,s,r);x.arcTo(s,s,0,s,r);x.arcTo(0,s,0,0,r);x.arcTo(0,0,s,0,r);x.closePath();x.fill();
+  x.fillStyle='rgba(255,255,255,.95)';x.beginPath();
+  var cx=s/2,top=s*0.20,w=s*0.30,bot=s*0.82;
+  x.moveTo(cx,top);x.lineTo(cx+w,top+s*0.07);x.lineTo(cx+w,s*0.5);
+  x.quadraticCurveTo(cx+w,bot-s*0.08,cx,bot);
+  x.quadraticCurveTo(cx-w,bot-s*0.08,cx-w,s*0.5);
+  x.lineTo(cx-w,top+s*0.07);x.closePath();x.fill();
+  x.strokeStyle=g;x.lineWidth=s*0.05;x.lineCap='round';
+  x.beginPath();x.moveTo(cx-w*0.55,s*0.52);x.lineTo(cx+w*0.55,s*0.40);x.stroke();
+  return c.toDataURL('image/png');
+}
+try{
+  var i180=makeIcon(180);
+  var al=document.createElement('link');al.rel='apple-touch-icon';al.href=i180;document.head.appendChild(al);
+}catch(_){}
+
+if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  navigator.serviceWorker.register('./sw.js').catch(function(err){ console.warn('SW registration failed:', err); });
+}
+
+var deferred=null, installBtn=$('#installBtn');
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;installBtn.classList.add('show');});
+var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+var standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+if(isIOS && !standalone) installBtn.classList.add('show');
+
+installBtn.addEventListener('click',async function(){
+  if(deferred){deferred.prompt();try{await deferred.userChoice;}catch(_){}deferred=null;installBtn.classList.remove('show');return;}
+  var steps=$('#instSteps');
+  if(isIOS){
+    $('#instIntro').textContent='In Safari, add Wype to your home screen — it opens full-screen like a real app.';
+    steps.innerHTML='<div class="row"><b>1</b><div>Tap the <b style="color:var(--text)">Share</b> button at the bottom of Safari (the square with an arrow).</div></div>'
+      +'<div class="row"><b>2</b><div>Scroll down and tap <b style="color:var(--text)">Add to Home Screen</b>.</div></div>'
+      +'<div class="row"><b>3</b><div>Tap <b style="color:var(--text)">Add</b>. Wype now lives on your home screen.</div></div>';
+  }else{
+    $('#instIntro').textContent='Add Wype to your home screen so you don\'t need to open the browser.';
+    steps.innerHTML='<div class="row"><b>1</b><div>Open your browser\'s <b style="color:var(--text)">⋮ menu</b> (top-right).</div></div>'
+      +'<div class="row"><b>2</b><div>Tap <b style="color:var(--text)">Install app</b> or <b style="color:var(--text)">Add to Home screen</b>.</div></div>'
+      +'<div class="row"><b>3</b><div>Confirm. Wype opens full-screen from your home screen.</div></div>';
+  }
+  $('#instModal').classList.add('show');
+});
+$('#instClose').addEventListener('click',function(){$('#instModal').classList.remove('show');});
+$('#instModal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+
+})();
+</script>
+</body>
+</html>

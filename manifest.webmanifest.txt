@@ -1,0 +1,16 @@
+{
+  "name": "Wype — Private File Cleaner",
+  "short_name": "Wype",
+  "description": "See what your files reveal, wipe what you choose. Everything happens on your device — nothing is uploaded.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0e14",
+  "theme_color": "#0a0e14",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
